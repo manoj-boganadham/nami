@@ -1,35 +1,35 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Albert+Sans:ital,wght@0,100..900;1,100..900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg-primary: #fdfaf5;
-  --bg-surface: #f5f0e8;
-  --bg-elevated: #ede8dc;
-  --border-default: #ddd5c0;
-  --accent-primary: #e89220;
+  --bg-primary: #ffffff;
+  --bg-surface: #f2f8fc;
+  --bg-elevated: #e1f0fa;
+  --border-default: #d0e6f7;
+  --accent-primary: #ff7f00;
   --accent-positive: #1a9e82;
   --accent-danger: #cc3333;
-  --accent-info: #2e78c7;
-  --text-primary: #1a1810;
-  --text-secondary: #6b6050;
-  --text-tertiary: #9a8e7a;
+  --accent-info: #0099ff;
+  --text-primary: #2f1f15;
+  --text-secondary: #8b4513;
+  --text-tertiary: #a88c74;
 }
 
 [data-theme="dark"] {
-  --bg-primary: #0a0e1a;
-  --bg-surface: #0f1525;
-  --bg-elevated: #1a2040;
-  --border-default: #1e2840;
-  --accent-primary: #e89220;
+  --bg-primary: #050c1e;
+  --bg-surface: #0c152b;
+  --bg-elevated: #182340;
+  --border-default: #1d2c54;
+  --accent-primary: #ff7f00;
   --accent-positive: #22bfa0;
   --accent-danger: #e84040;
-  --accent-info: #4a90e2;
-  --text-primary: #f0ead6;
-  --text-secondary: #7a8ab0;
-  --text-tertiary: #5a6a90;
+  --accent-info: #0099ff;
+  --text-primary: #ffffff;
+  --text-secondary: #ffcc00;
+  --text-tertiary: #7b8ab0;
 }
 
 body {
@@ -37,12 +37,12 @@ body {
   padding: 0;
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Albert Sans', sans-serif;
   transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Cinzel', serif;
+  font-family: 'Fraunces', serif;
 }
 
 /* Custom scrollbars */

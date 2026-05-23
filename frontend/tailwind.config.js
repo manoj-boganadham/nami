@@ -7,8 +7,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        cinzel: ['Cinzel', 'serif'],
-        sans: ['"DM Sans"', 'sans-serif'],
+        cinzel: ['Fraunces', 'serif'],
+        sans: ['"Albert Sans"', 'sans-serif'],
       },
       colors: {
         bg: {
