@@ -1,0 +1,10 @@
+services:
+  finance-api:
+    build: .
+    container_name: finance-api-container
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./finance.db:/app/finance.db
+      - ./nami_config.env:/app/nami_config.env
+    restart: always
