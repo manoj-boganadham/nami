@@ -12,6 +12,7 @@ interface Transaction {
   raw_message_id: number;
   amount: number;
   category: string | null;
+  mode_of_payment: string | null;
   description: string;
   timestamp: string;
   created_at: string;
@@ -142,6 +143,25 @@ export const App: React.FC = () => {
     } catch (err) {
       console.error(err);
       alert("Error saving category update");
+    }
+  };
+
+  const handleUpdateModeOfPayment = async (id: number, modeOfPayment: string) => {
+    try {
+      const response = await fetch(`/api/transactions/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ mode_of_payment: modeOfPayment || null }),
+      });
+      if (!response.ok) throw new Error("Failed to update payment mode");
+      
+      // Force trigger refresh of stats and transaction lists
+      setRefreshTrigger((prev) => prev + 1);
+    } catch (err) {
+      console.error(err);
+      alert("Error saving payment mode update");
     }
   };
 
@@ -340,6 +360,7 @@ export const App: React.FC = () => {
                   <TransactionList
                     transactions={transactions}
                     onUpdateCategory={handleUpdateCategory}
+                    onUpdateModeOfPayment={handleUpdateModeOfPayment}
                     largeSpendThreshold={2000}
                   />
                 </div>

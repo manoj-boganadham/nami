@@ -11,6 +11,8 @@ class RawMessage(Base):
     received_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
     processed = Column(Boolean, default=False, nullable=False)
     parse_failed = Column(Boolean, default=False, nullable=False)
+    category = Column(String, nullable=True)
+    mode_of_payment = Column(String, nullable=True)
 
     # Establish relationship to Transaction
     transactions = relationship("Transaction", back_populates="raw_message", cascade="all, delete-orphan")
@@ -24,6 +26,7 @@ class Transaction(Base):
     amount = Column(Float, nullable=False)
     category = Column(String, nullable=True)  # Food, Transport, Shopping, Health, Utilities, Entertainment, Other
     description = Column(String, nullable=True)  # User-editable description, defaults to raw message
+    mode_of_payment = Column(String, nullable=True)
     timestamp = Column(DateTime, nullable=False)  # Copied from RawMessage.received_at
     created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
 

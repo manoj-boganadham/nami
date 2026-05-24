@@ -1,60 +1,78 @@
-# Implement Nami Log Book Tab (v2)
+# Implement Custom Ingestion Fields & Mode of Payment (v3)
 
-We will implement Nami v2 to add a new "Log Book" tab to the dashboard, allowing users to inspect raw message ingestion logs, filter/search them, and trigger on-demand reprocessing of pending or failed messages.
+We will update Nami to accept optional `category` and `modeOfPayment` fields on raw message ingestion. These fields will persist in the database, propagate to transaction records during processing, and be editable on the dashboard.
 
 ## User Review Required
 
+> [!IMPORTANT]
+> **Database Schema Migration:** We need to add:
+> - `category` (TEXT, Nullable) and `mode_of_payment` (TEXT, Nullable) to the `raw_messages` table.
+> - `mode_of_payment` (TEXT, Nullable) to the `transactions` table.
+> Since SQLite doesn't natively support automated migrations without Alembic, we will update the startup script (`db/init_db.py`) to check if these columns exist and run `ALTER TABLE` SQL statements dynamically if they are missing. This prevents database data loss for existing users while adding the new columns seamlessly!
+
 > [!NOTE]
-> **Upsert / Clean Delete Logic for Reprocessing:** When manually triggering `/api/raw_messages/{id}/reprocess`:
-> - If the parser successfully extracts an amount, it will search for an existing transaction matching `raw_message_id`. If it exists, it updates it. If not, it creates a new one.
-> - If the parser fails to extract an amount, any existing transaction matching `raw_message_id` will be deleted from the database to ensure data integrity, and the raw message is marked as `parse_failed = true`.
-> This guarantees that the transaction ledger remains consistent with the raw messages.
+> **Modes of Payment:** We will define standard payment modes: `UPI` (📱), `Card` (💳), `Cash` (💵), and `Net Banking` (🌐). Users will be able to select and update the mode of payment inline on the transaction list, similar to how they assign categories.
 
 ---
 
 ## Proposed Changes
 
-### Backend API Additions
+### Database Layer (Schema & Models)
 
-We will implement raw message querying and on-demand reprocessing endpoints inside `routes/messages.py`.
+#### [MODIFY] [models.py](file:///Users/bogaman/Documents/Projects/finance-manager/db/models.py)
+- Add `category` (String, nullable) and `mode_of_payment` (String, nullable) to `RawMessage` model.
+- Add `mode_of_payment` (String, nullable) to `Transaction` model.
 
-#### [MODIFY] [messages.py](file:///Users/bogaman/Documents/Projects/finance-manager/routes/messages.py)
-- Implement `GET /api/raw_messages` to fetch logs. Supports query parameters `status` (`all`, `pending`, `processed`, `failed`) and `search` (case-insensitive text search).
-- Implement `POST /api/raw_messages/{id}/reprocess` which triggers the amount extractor on a specific raw message and upserts or deletes the corresponding transaction.
-
-#### [NEW] [test_v2_api.py](file:///Users/bogaman/Documents/Projects/finance-manager/tests/test_v2_api.py)
-- Write unit tests for message status filters, text searching, and the reprocessing pipeline behavior (upsert vs cleanup).
+#### [MODIFY] [init_db.py](file:///Users/bogaman/Documents/Projects/finance-manager/db/init_db.py)
+- Update init script to dynamically check if the new columns exist in `raw_messages` and `transactions`, running `ALTER TABLE ADD COLUMN` if they are missing.
 
 ---
 
-### React Frontend Dashboard (Log Book Tab)
+### Backend API Updates
 
-We will expand the React interface to accommodate the new tab, filtering controls, and the raw messages overview.
+#### [MODIFY] [messages.py](file:///Users/bogaman/Documents/Projects/finance-manager/routes/messages.py)
+- Update Pydantic schemas for `POST /api/messages` to accept optional `category` and `modeOfPayment` (which maps to `mode_of_payment`).
+- Store these fields in `RawMessage` during ingestion.
+- Update `GET /api/raw_messages` to return the new fields.
+- Update `/api/raw_messages/{id}/reprocess` to copy `category` and `mode_of_payment` to the `Transaction` record.
 
-#### [NEW] [LogBookPanel.tsx](file:///Users/bogaman/Documents/Projects/finance-manager/frontend/src/components/LogBookPanel.tsx)
-- Build a responsive table to display raw message entries with ID, text, received date, and status badges.
-- Add status pills/badges (Parsed/Pending/Failed) in corresponding colors.
-- Build search bar inputs and status selection filter dropdowns.
-- Embed a "Reprocess" action button with visual loading spinner state.
+#### [MODIFY] [transaction_generator.py](file:///Users/bogaman/Documents/Projects/finance-manager/services/transaction_generator.py)
+- Update batch processing logic (`process_unprocessed_messages`) to copy `category` and `mode_of_payment` from the `RawMessage` into the newly created `Transaction`.
+
+#### [MODIFY] [transactions.py](file:///Users/bogaman/Documents/Projects/finance-manager/routes/transactions.py)
+- Update `TransactionUpdate` schema in `PATCH /api/transactions/{id}` to accept optional `mode_of_payment`.
+- Update `format_transaction` to return `mode_of_payment` in the output dictionary.
+
+#### [NEW] [test_v3_api.py](file:///Users/bogaman/Documents/Projects/finance-manager/tests/test_v3_api.py)
+- Add unit tests verifying:
+  - Ingestion with custom `category` and `modeOfPayment`.
+  - Propagation of these fields to the transaction table on reprocessing.
+  - Patching of `mode_of_payment` via the API.
+
+---
+
+### Frontend Dashboard Updates
+
+#### [MODIFY] [TransactionList.tsx](file:///Users/bogaman/Documents/Projects/finance-manager/frontend/src/components/TransactionList.tsx)
+- Add a column or inline pill badge displaying the Mode of Payment.
+- Build an inline dropdown selector to change the payment mode (UPI, Card, Cash, Net Banking, or clear it).
 
 #### [MODIFY] [App.tsx](file:///Users/bogaman/Documents/Projects/finance-manager/frontend/src/App.tsx)
-- Create tab state `activeTab` ("chart" vs "logbook").
-- Integrate tab selection segmented buttons into the header, next to the date filters.
-- Swap the dashboard grids (analytics charts, category cards) for the `LogBookPanel` when active.
-- Ensure that reprocessing raw messages triggers cache refresh on general metrics (Weekly Total, Today's Haul).
+- Update network state mappings to fetch and submit `mode_of_payment` modifications during inline row updates.
 
 ---
 
 ## Verification Plan
 
 ### Automated Tests
-- Run `pytest` to execute tests in `tests/test_v2_api.py`:
-  - `GET /api/raw_messages` filters by pending, processed, failed, and search filters.
-  - `POST /api/raw_messages/{id}/reprocess` verifies upserting valid transactions and deleting transactions when parsing fails.
+- Run `PYTHONPATH=. ./venv/bin/pytest` to verify ingestion payloads and data propagation.
 
 ### Manual Verification
-- Deploy using Docker/local environment.
-- Send a conversational SMS text payload (e.g. "OTP is 12345") using curl.
-- Open the Log Book tab on the dashboard, see the message highlighted as "Failed" (since it has no amount).
-- Send a transaction SMS text payload (e.g. "Spent Rs. 650 at supermarket"). See it highlighted as "Pending" or run the parser to see it as "Parsed".
-- Click the "Reprocess" button on a log and verify status shifts and ledger values update dynamically.
+- Ingest a transaction with custom metadata:
+  ```bash
+  curl -X POST http://localhost:8000/messages \
+    -H "Content-Type: application/json" \
+    -d '{"message": "Dinner Rs 1200", "category": "Food", "modeOfPayment": "UPI"}'
+  ```
+- Reprocess the message and verify that the resulting transaction is created with the category pre-filled as `Food` and the mode of payment pre-filled as `UPI`.
+- Open the dashboard, verify the payment mode pill is shown, and change it to `Card` manually to test the update trigger.

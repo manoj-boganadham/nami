@@ -12,9 +12,12 @@ router = APIRouter()
 
 ALLOWED_CATEGORIES = {"Food", "Transport", "Shopping", "Health", "Utilities", "Entertainment", "Other"}
 
+ALLOWED_MODES = {"UPI", "Card", "Cash", "Net Banking"}
+
 class TransactionUpdate(BaseModel):
     category: Optional[str] = None
     description: Optional[str] = None
+    mode_of_payment: Optional[str] = None
 
     @field_validator("category")
     @classmethod
@@ -23,12 +26,20 @@ class TransactionUpdate(BaseModel):
             raise ValueError(f"Category must be one of: {', '.join(ALLOWED_CATEGORIES)}")
         return v or None
 
+    @field_validator("mode_of_payment")
+    @classmethod
+    def validate_mode_of_payment(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v != "" and v not in ALLOWED_MODES:
+            raise ValueError(f"Mode of payment must be one of: {', '.join(ALLOWED_MODES)}")
+        return v or None
+
 def format_transaction(tx: Transaction):
     return {
         "id": tx.id,
         "raw_message_id": tx.raw_message_id,
         "amount": tx.amount,
         "category": tx.category,
+        "mode_of_payment": tx.mode_of_payment,
         "description": tx.description or (tx.raw_message.message if tx.raw_message else ""),
         "timestamp": tx.timestamp,
         "created_at": tx.created_at,
@@ -85,13 +96,17 @@ def update_transaction(
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
 
-    # Update category if supplied
-    if payload.category is not None:
+    # Extract only fields that were explicitly set in the request body
+    update_data = payload.dict(exclude_unset=True)
+
+    if "category" in update_data:
         tx.category = payload.category
 
-    # Update description if supplied
-    if payload.description is not None:
+    if "description" in update_data:
         tx.description = payload.description
+
+    if "mode_of_payment" in update_data:
+        tx.mode_of_payment = payload.mode_of_payment
 
     db.commit()
     db.refresh(tx)

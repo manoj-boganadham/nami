@@ -6,6 +6,7 @@ interface Transaction {
   raw_message_id: number;
   amount: number;
   category: string | null;
+  mode_of_payment: string | null;
   description: string;
   timestamp: string;
   created_at: string;
@@ -14,6 +15,7 @@ interface Transaction {
 interface TransactionListProps {
   transactions: Transaction[];
   onUpdateCategory: (id: number, category: string) => Promise<void>;
+  onUpdateModeOfPayment: (id: number, modeOfPayment: string) => Promise<void>;
   largeSpendThreshold?: number;
 }
 
@@ -30,9 +32,20 @@ const CATEGORY_STYLES: Record<string, { dot: string; text: string; bg: string; e
 
 const ALLOWED_CATEGORIES = ["Food", "Transport", "Shopping", "Health", "Utilities", "Entertainment", "Other"];
 
+const MODE_OF_PAYMENT_STYLES: Record<string, { dot: string; text: string; bg: string; emoji: string }> = {
+  UPI: { dot: "bg-indigo-500", text: "text-indigo-700 dark:text-indigo-300", bg: "bg-indigo-100 dark:bg-indigo-900/30", emoji: "📱" },
+  Card: { dot: "bg-teal-500", text: "text-teal-700 dark:text-teal-300", bg: "bg-teal-100 dark:bg-teal-900/30", emoji: "💳" },
+  Cash: { dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-300", bg: "bg-emerald-100 dark:bg-emerald-900/30", emoji: "💵" },
+  "Net Banking": { dot: "bg-blue-500", text: "text-blue-700 dark:text-blue-300", bg: "bg-blue-100 dark:bg-blue-900/30", emoji: "🌐" },
+  Unspecified: { dot: "bg-stone-300 dark:bg-stone-600", text: "text-stone-600 dark:text-stone-400", bg: "bg-stone-100 dark:bg-stone-800/30", emoji: "❓" },
+};
+
+const ALLOWED_MODES = ["UPI", "Card", "Cash", "Net Banking"];
+
 export const TransactionList: React.FC<TransactionListProps> = ({
   transactions = [],
   onUpdateCategory,
+  onUpdateModeOfPayment,
   largeSpendThreshold = 2000,
 }) => {
   // Group transactions by date string YYYY-MM-DD
@@ -102,6 +115,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                   const style = CATEGORY_STYLES[catKey] || CATEGORY_STYLES["Other"];
                   const isFlagged = tx.amount >= largeSpendThreshold;
 
+                  const modeKey = tx.mode_of_payment || "Unspecified";
+                  const modeStyle = MODE_OF_PAYMENT_STYLES[modeKey] || MODE_OF_PAYMENT_STYLES["Unspecified"];
+
                   return (
                     <div
                       key={tx.id}
@@ -141,7 +157,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-3 flex-shrink-0">
+                      <div className="flex items-center space-x-2 flex-shrink-0">
                         {/* Inline Category Picker (Styled Native Dropdown) */}
                         <div className="relative">
                           <select
@@ -163,6 +179,35 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                                 className="bg-bg-surface text-text-primary"
                               >
                                 {CATEGORY_STYLES[cat].emoji} {cat}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1.5 text-text-secondary">
+                            <ChevronDown className="h-3 w-3" />
+                          </div>
+                        </div>
+
+                        {/* Inline Payment Mode Picker (Styled Native Dropdown) */}
+                        <div className="relative">
+                          <select
+                            value={tx.mode_of_payment || ""}
+                            onChange={(e) => onUpdateModeOfPayment(tx.id, e.target.value)}
+                            className={`appearance-none pr-6 pl-2 py-1 rounded-lg border text-[10px] font-bold transition-all duration-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent-primary ${
+                              !tx.mode_of_payment
+                                ? "bg-bg-elevated text-text-secondary border-border-default hover:bg-bg-elevated/80"
+                                : `${modeStyle.bg} ${modeStyle.text} border-transparent hover:brightness-95`
+                            }`}
+                          >
+                            <option value="" className="bg-bg-surface text-text-primary">
+                              💳 Mode
+                            </option>
+                            {ALLOWED_MODES.map((mode) => (
+                              <option
+                                key={mode}
+                                value={mode}
+                                className="bg-bg-surface text-text-primary"
+                              >
+                                {MODE_OF_PAYMENT_STYLES[mode].emoji} {mode}
                               </option>
                             ))}
                           </select>

@@ -57,11 +57,17 @@ def process_unprocessed_messages(db: Session) -> dict:
         amount = extract_amount(raw_msg.message)
 
         if amount is not None:
+            category_val = None
+            ALLOWED_CATEGORIES = {"Food", "Transport", "Shopping", "Health", "Utilities", "Entertainment", "Other"}
+            if raw_msg.category in ALLOWED_CATEGORIES:
+                category_val = raw_msg.category
+
             tx = Transaction(
                 raw_message_id=raw_msg.id,
                 amount=amount,
-                category=None,
+                category=category_val,
                 description=raw_msg.message,
+                mode_of_payment=raw_msg.mode_of_payment,
                 timestamp=raw_msg.received_at
             )
             db.add(tx)

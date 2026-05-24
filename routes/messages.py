@@ -20,12 +20,16 @@ async def ingest_message(
 ):
     content_type = request.headers.get("content-type", "")
     message_text = ""
+    custom_category = None
+    custom_mode = None
 
     if "application/json" in content_type:
         try:
             body = await request.json()
             if isinstance(body, dict):
                 message_text = body.get("message", "")
+                custom_category = body.get("category")
+                custom_mode = body.get("modeOfPayment")
             else:
                 message_text = str(body)
         except Exception:
@@ -41,7 +45,11 @@ async def ingest_message(
     if not message_text:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Message body cannot be empty")
 
-    new_msg = RawMessage(message=message_text)
+    new_msg = RawMessage(
+        message=message_text,
+        category=custom_category,
+        mode_of_payment=custom_mode
+    )
     db.add(new_msg)
     db.commit()
     db.refresh(new_msg)
@@ -51,7 +59,9 @@ async def ingest_message(
         "message": new_msg.message,
         "received_at": new_msg.received_at,
         "processed": new_msg.processed,
-        "parse_failed": new_msg.parse_failed
+        "parse_failed": new_msg.parse_failed,
+        "category": new_msg.category,
+        "mode_of_payment": new_msg.mode_of_payment
     }
 
 @router.get("/api/raw_messages")
@@ -80,7 +90,9 @@ def get_raw_messages(
             "message": msg.message,
             "received_at": msg.received_at,
             "processed": msg.processed,
-            "parse_failed": msg.parse_failed
+            "parse_failed": msg.parse_failed,
+            "category": msg.category,
+            "mode_of_payment": msg.mode_of_payment
         } for msg in raw_msgs
     ]
 
@@ -103,15 +115,25 @@ def reprocess_message(
     existing_tx = db.query(Transaction).filter(Transaction.raw_message_id == id).first()
 
     if amount is not None:
+        category_val = None
+        ALLOWED_CATEGORIES = {"Food", "Transport", "Shopping", "Health", "Utilities", "Entertainment", "Other"}
+        if raw_msg.category in ALLOWED_CATEGORIES:
+            category_val = raw_msg.category
+
         if existing_tx:
             existing_tx.amount = amount
             existing_tx.timestamp = raw_msg.received_at
+            if category_val is not None:
+                existing_tx.category = category_val
+            if raw_msg.mode_of_payment is not None:
+                existing_tx.mode_of_payment = raw_msg.mode_of_payment
         else:
             new_tx = Transaction(
                 raw_message_id=raw_msg.id,
                 amount=amount,
-                category=None,
+                category=category_val,
                 description=raw_msg.message,
+                mode_of_payment=raw_msg.mode_of_payment,
                 timestamp=raw_msg.received_at
             )
             db.add(new_tx)
