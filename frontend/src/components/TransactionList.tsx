@@ -40,7 +40,7 @@ const MODE_OF_PAYMENT_STYLES: Record<string, { dot: string; text: string; bg: st
   Unspecified: { dot: "bg-stone-300 dark:bg-stone-600", text: "text-stone-600 dark:text-stone-400", bg: "bg-stone-100 dark:bg-stone-800/30", emoji: "❓" },
 };
 
-const ALLOWED_MODES = ["UPI", "Card", "Cash", "Net Banking"];
+const ALLOWED_MODES = ["UPI", "Card"];
 
 export const TransactionList: React.FC<TransactionListProps> = ({
   transactions = [],

@@ -12,7 +12,7 @@ router = APIRouter()
 
 ALLOWED_CATEGORIES = {"Food", "Transport", "Shopping", "Health", "Utilities", "Entertainment", "Other"}
 
-ALLOWED_MODES = {"UPI", "Card", "Cash", "Net Banking"}
+ALLOWED_MODES = {"UPI", "Card"}
 
 class TransactionUpdate(BaseModel):
     category: Optional[str] = None
